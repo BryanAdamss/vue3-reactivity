@@ -1,6 +1,6 @@
 /**
  * @author GuangHui
- * @description 入口
+ * @description 重新计算
  */
 
 let price = 10
