@@ -5,9 +5,6 @@
 /* targetMap key 直接保存响应对象,value 为depsMap */
 const targetMap = new WeakMap()
 
-/* 对象每个属性都有自己的依赖,需要 map 存储,key 为对象属性,value 为属性的依赖 Set,Set 保存依赖副作用 effect */
-const depsMap = new Map()
-
 function track(target, key) {
   console.count('track count')
   let depsMap = targetMap.get(target)

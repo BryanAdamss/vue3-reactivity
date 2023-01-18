@@ -1,13 +1,13 @@
 /**
  * @author GuangHui
- * @description 修复多次 track
+ * @description 实现 ref
  */
 
 /* targetMap key 直接保存响应对象,value 为depsMap */
 const targetMap = new WeakMap()
 
 function track(target, key) {
-  // ! activeEffect 存在时才 track
+  // activeEffect 存在时才 track
   if (activeEffect) {
     console.count('track count')
     let depsMap = targetMap.get(target)
@@ -15,7 +15,7 @@ function track(target, key) {
 
     let dep = depsMap.get(key)
     if (!dep) depsMap.set(key, (dep = new Set())) // 不存在则创建一个 Set
-    // ! 保存activeEffect
+
     dep.add(activeEffect)
   }
 }
@@ -56,16 +56,32 @@ function reactive(target) {
   return new Proxy(target, handler)
 }
 
+function ref(initalValue) {
+  // * 方法一,use reactive
+  // return reactive({ value: initalValue })
+  // * 方法二, use object get/set method
+  const r = {
+    get value() {
+      track(r, 'value')
+      return initalValue
+    },
+
+    set value(newVal) {
+      if (newVal === initalValue) return // 若无此判断,则会由于 trigger->effect->设置 scalePrice.value 触发 set->trigger->effect... 进入死循环
+
+      initalValue = newVal
+
+      trigger(r, 'value')
+    },
+  }
+
+  return r
+}
+
 const product = reactive({ price: 10, quantity: 1 })
+let scalePrice = ref(0) // ! 响应式
 let total = 0
-let scalePrice = 0
 
-// const effect = () => (total = product.price * product.quantity)
-// effect()
-
-// ! track 只应该在首次执行 effec 时调用,trigger触发时,不应该再 track
-// ! 通过 activeEffect 和 effect改造,保证 activeEffect 只在 effect()调用时有效
-// ! 在track 时判断 activeEffect 是否存在,决定是否 track
 let activeEffect = null
 
 function effect(eff) {
@@ -75,16 +91,16 @@ function effect(eff) {
 }
 
 effect(() => {
-  total = product.price * product.quantity
+  total = scalePrice.value * product.quantity // ! 调整total计算方式,折扣价*数量
 })
 
 effect(() => {
-  scalePrice = product.price * 0.9
+  scalePrice.value = product.price * 0.9 // ! 改变时,total 会自动变化
 })
 
 console.log(`total is ${total}`)
 
-product.quantity = 2 // !  只触发一次
+product.quantity = 2
 console.log(`total is ${total}`)
 
 console.log('--------------')
